@@ -42,12 +42,12 @@ echo "[start] noVNC/websockify on :$WEB_PORT -> localhost:$VNC_PORT"
 websockify --web /usr/share/novnc "$WEB_PORT" "localhost:$VNC_PORT" \
        >/var/log/df/websockify.log 2>&1 &
 
-echo "[start] launching Dwarf Fortress (PRINT_MODE:2D, SOUND:NO); auto-restart on exit"
+echo "[start] launching Dwarf Fortress via DFHack (PRINT_MODE:2D, SOUND:NO); auto-restart on exit"
 cd /opt/df
 (
   while true; do
-    LD_LIBRARY_PATH=/opt/df ./dwarfort >>/var/log/df/df.log 2>&1
-    echo "[start] !!! dwarfort exited rc=$? — restarting in 2s" >>/var/log/df/df.log
+    LD_LIBRARY_PATH=/opt/df ./dfhack >>/var/log/df/df.log 2>&1
+    echo "[start] !!! dfhack exited rc=$? — restarting in 2s" >>/var/log/df/df.log
     sleep 2
   done
 ) &

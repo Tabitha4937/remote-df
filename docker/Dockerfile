@@ -53,7 +53,14 @@ RUN mkdir -p /opt/df \
     && curl -fsSL "$DF_URL" -o /tmp/df.tar.bz2 \
     && tar -xjf /tmp/df.tar.bz2 -C /opt/df \
     && rm /tmp/df.tar.bz2
-LABEL df.version="${DF_VERSION}"
+# DFHack — mod framework for Dwarf Fortress.
+# Extracted over the DF directory; provides the ./dfhack launcher script.
+ARG DFHACK_VERSION=53.14-r2
+RUN curl -fsSL "https://github.com/DFHack/dfhack/releases/download/${DFHACK_VERSION}/dfhack-${DFHACK_VERSION}-Linux-64bit.tar.bz2" \
+      -o /tmp/dfhack.tar.bz2 \
+    && tar -xjf /tmp/dfhack.tar.bz2 -C /opt/df \
+    && rm /tmp/dfhack.tar.bz2
+LABEL df.version="${DF_VERSION}" dfhack.version="${DFHACK_VERSION}"
 
 # Override the bundled/system SDL2 with our XInput2-free build (see stage 1).
 # DF loads this first via LD_LIBRARY_PATH=/opt/df; ABI-compatible with the

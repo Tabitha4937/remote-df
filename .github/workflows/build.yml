@@ -8,6 +8,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   DF_VERSION: "53_14"
+  DFHACK_VERSION: "53.14-r2"
 
 jobs:
   build:
@@ -43,3 +44,4 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             DF_VERSION=${{ env.DF_VERSION }}
+            DFHACK_VERSION=${{ env.DFHACK_VERSION }}
