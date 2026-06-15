@@ -69,8 +69,9 @@ RUN --mount=type=secret,id=steam_user \
       dpkg --add-architecture i386 && \
       apt-get update && \
       apt-get install -y --no-install-recommends lib32gcc-s1 && \
+      mkdir -p /tmp/steamcmd && \
       curl -fsSL "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" \
-        | tar -xz -C /tmp && \
+        | tar -xz -C /tmp/steamcmd && \
       /tmp/steamcmd/steamcmd.sh \
         +@sSteamCmdForcePlatformType linux \
         +force_install_dir /opt/df \
