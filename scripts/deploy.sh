@@ -23,9 +23,11 @@ if [ "$DF_EDITION" = "steam" ]; then
   IMAGE="remote-df:df-${DF_VERSION}-steam"
   echo "==> Building steam edition on $REMOTE (SteamCMD needs native x86_64)"
   ssh "$REMOTE" "mkdir -p ~/remote-df/docker"
-  scp -q "$HERE/docker/Dockerfile" "$REMOTE:~/remote-df/docker/Dockerfile"
-  scp -q "$HERE/docker/start.sh"   "$REMOTE:~/remote-df/docker/start.sh"
-  scp -q "$HERE/.dockerignore"     "$REMOTE:~/remote-df/.dockerignore"
+  scp -q "$HERE/docker/Dockerfile"  "$REMOTE:~/remote-df/docker/Dockerfile"
+  scp -q "$HERE/docker/start.sh"    "$REMOTE:~/remote-df/docker/start.sh"
+  scp -q "$HERE/docker/nginx.conf"  "$REMOTE:~/remote-df/docker/nginx.conf"
+  scp -q "$HERE/docker/index.html"  "$REMOTE:~/remote-df/docker/index.html"
+  scp -q "$HERE/.dockerignore"      "$REMOTE:~/remote-df/.dockerignore"
 
   ssh "$REMOTE" bash -s <<SCRIPT
     set -euo pipefail

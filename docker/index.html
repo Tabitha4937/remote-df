@@ -1,67 +1,86 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Dwarf Fortress</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; }
-
-    #vnc-frame {
-      display: block;
-      width: 100%;
-      height: calc(100% - 36px);
-      border: none;
-    }
-
-    #audio-bar {
-      height: 36px;
-      background: #111;
-      border-top: 1px solid #333;
-      display: flex;
-      align-items: center;
-      padding: 0 10px;
-      gap: 8px;
-    }
-
-    #audio-bar span {
-      color: #666;
-      font: 11px/1 monospace;
-      white-space: nowrap;
-      user-select: none;
-    }
-
-    #audio-player {
-      flex: 1;
-      height: 26px;
-      accent-color: #8b6914;
-    }
-  </style>
-</head>
-<body>
-  <!-- noVNC connects WebSocket to /websockify (same origin, nginx proxies it) -->
-  <iframe id="vnc-frame"
-          src="vnc.html?autoconnect=1&resize=scale&path=websockify"
-          allowfullscreen></iframe>
-
-  <div id="audio-bar">
-    <span>&#x1F50A;</span>
-    <audio id="audio-player" src="/audio" autoplay controls></audio>
-  </div>
-
-  <script>
-    const frame = document.getElementById('vnc-frame');
-    const bar   = document.getElementById('audio-bar');
-
-    // Give the noVNC iframe keyboard focus after it loads and on click
-    // (except when interacting with the audio bar).
-    frame.addEventListener('load', () => { try { frame.contentWindow.focus(); } catch(_) {} });
-    document.addEventListener('click', e => {
-      if (!bar.contains(e.target)) {
-        try { frame.contentWindow.focus(); } catch(_) {}
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dwarf Fortress</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
       }
-    });
-  </script>
-</body>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+      }
+
+      #vnc-frame {
+        display: block;
+        width: 100%;
+        height: calc(100% - 36px);
+        border: none;
+      }
+
+      #audio-bar {
+        height: 36px;
+        background: #111;
+        border-top: 1px solid #333;
+        display: flex;
+        align-items: center;
+        padding: 0 10px;
+        gap: 8px;
+      }
+
+      #audio-bar span {
+        color: #666;
+        font: 11px/1 monospace;
+        white-space: nowrap;
+        user-select: none;
+      }
+
+      #audio-player {
+        flex: 1;
+        height: 26px;
+        accent-color: #8b6914;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- noVNC connects WebSocket to /websockify (same origin, nginx proxies it) -->
+    <iframe
+      id="vnc-frame"
+      src="vnc.html?autoconnect=1&resize=scale&path=websockify"
+      allowfullscreen
+    ></iframe>
+
+    <div id="audio-bar">
+      <span>&#x1F50A;</span>
+      <audio id="audio-player" src="/audio" autoplay controls></audio>
+    </div>
+
+    <script>
+      const frame = document.getElementById("vnc-frame");
+      const bar = document.getElementById("audio-bar");
+
+      // Give the noVNC iframe keyboard focus after it loads and on click
+      // (except when interacting with the audio bar).
+      frame.addEventListener("load", () => {
+        try {
+          frame.contentWindow.focus();
+        } catch (_) {}
+      });
+      document.addEventListener("click", (e) => {
+        if (!bar.contains(e.target)) {
+          try {
+            frame.contentWindow.focus();
+          } catch (_) {}
+        }
+      });
+    </script>
+  </body>
 </html>
