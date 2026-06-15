@@ -9,6 +9,7 @@ if [ -z "${1:-}" ]; then
   exit 1
 fi
 REMOTE="$1"
+DF_VERSION="${DF_VERSION:-53_14}"
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "==> Ensuring dirs on $REMOTE"
@@ -20,8 +21,8 @@ scp -q "$HERE/docker/start.sh"   "$REMOTE:~/remote-df/docker/start.sh"
 scp -q "$HERE/.dockerignore"     "$REMOTE:~/remote-df/.dockerignore"
 scp -q "$HERE/scripts/remote-run.sh" "$REMOTE:~/remote-df/scripts/remote-run.sh"
 
-echo "==> Building image natively on $REMOTE"
-ssh "$REMOTE" "cd ~/remote-df && docker build -f docker/Dockerfile -t remote-df:native ."
+echo "==> Building image natively on $REMOTE (DF $DF_VERSION)"
+ssh "$REMOTE" "cd ~/remote-df && docker build --build-arg DF_VERSION=$DF_VERSION -f docker/Dockerfile -t remote-df:df-$DF_VERSION ."
 
 echo "==> Starting container on $REMOTE"
 ssh "$REMOTE" "bash ~/remote-df/scripts/remote-run.sh"

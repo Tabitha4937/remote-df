@@ -45,11 +45,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Game files (the closed-source binary + data + bundled .so libs).
 # Downloaded from Bay12 Games at build time.
-ARG DF_URL=https://www.bay12games.com/dwarves/df_53_14_linux.tar.bz2
+ARG DF_VERSION=53_14
+ARG DF_URL=https://www.bay12games.com/dwarves/df_${DF_VERSION}_linux.tar.bz2
 RUN mkdir -p /opt/df \
     && curl -fsSL "$DF_URL" -o /tmp/df.tar.bz2 \
     && tar -xjf /tmp/df.tar.bz2 -C /opt/df --strip-components=1 \
     && rm /tmp/df.tar.bz2
+LABEL df.version="${DF_VERSION}"
 
 # Override the bundled/system SDL2 with our XInput2-free build (see stage 1).
 # DF loads this first via LD_LIBRARY_PATH=/opt/df; ABI-compatible with the
