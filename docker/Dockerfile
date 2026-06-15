@@ -68,8 +68,10 @@ RUN if [ "$DF_EDITION" = "classic" ]; then \
     fi
 
 # Steam edition: download via SteamCMD (requires build secrets).
+# If Steam Guard (2FA) is enabled, also pass the steam_guard secret.
 RUN --mount=type=secret,id=steam_user \
     --mount=type=secret,id=steam_pass \
+    --mount=type=secret,id=steam_guard \
     if [ "$DF_EDITION" = "steam" ]; then \
       set -e && mkdir -p /opt/df && \
       dpkg --add-architecture i386 && \
@@ -78,9 +80,14 @@ RUN --mount=type=secret,id=steam_user \
       mkdir -p /tmp/steamcmd /root && \
       curl -fsSL "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" \
         | tar -xz -C /tmp/steamcmd && \
+      GUARD_ARG="" && \
+      if [ -f /run/secrets/steam_guard ] && [ -s /run/secrets/steam_guard ]; then \
+        GUARD_ARG="+set_steam_guard_code $(cat /run/secrets/steam_guard)"; \
+      fi && \
       HOME=/root /tmp/steamcmd/steamcmd.sh \
         +@sSteamCmdForcePlatformType linux \
         +force_install_dir /opt/df \
+        $GUARD_ARG \
         +login "$(cat /run/secrets/steam_user)" "$(cat /run/secrets/steam_pass)" \
         +app_update 975370 validate \
         +quit && \

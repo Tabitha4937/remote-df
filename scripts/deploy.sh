@@ -4,6 +4,7 @@
 #
 # For the steam edition, builds locally (requires Steam credentials) and pushes:
 #   DF_EDITION=steam STEAM_USER=x STEAM_PASS=y ./scripts/deploy.sh <host>
+# If Steam Guard (2FA) is enabled, also set STEAM_GUARD=<code>
 set -euo pipefail
 
 if [ -z "${1:-}" ]; then
@@ -21,7 +22,8 @@ if [ "$DF_EDITION" = "steam" ]; then
   echo "==> Building steam edition locally (requires Steam credentials)"
   echo "${STEAM_USER:?Set STEAM_USER}" > /tmp/.steam_user
   echo "${STEAM_PASS:?Set STEAM_PASS}" > /tmp/.steam_pass
-  trap 'rm -f /tmp/.steam_user /tmp/.steam_pass' EXIT
+  echo "${STEAM_GUARD:-}" > /tmp/.steam_guard
+  trap 'rm -f /tmp/.steam_user /tmp/.steam_pass /tmp/.steam_guard' EXIT
   HERE="$(cd "$(dirname "$0")/.." && pwd)"
   docker build \
     --platform linux/amd64 \
@@ -29,11 +31,12 @@ if [ "$DF_EDITION" = "steam" ]; then
     --build-arg DF_EDITION=steam \
     --secret id=steam_user,src=/tmp/.steam_user \
     --secret id=steam_pass,src=/tmp/.steam_pass \
+    --secret id=steam_guard,src=/tmp/.steam_guard \
     -f "$HERE/docker/Dockerfile" \
     -t "$IMAGE" "$HERE"
   echo "==> Pushing image to $REGISTRY"
   docker push "$IMAGE"
-  rm -f /tmp/.steam_user /tmp/.steam_pass
+  rm -f /tmp/.steam_user /tmp/.steam_pass /tmp/.steam_guard
 fi
 
 echo "==> Pulling image on $REMOTE"

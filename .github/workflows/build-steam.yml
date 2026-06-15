@@ -37,6 +37,7 @@ jobs:
         run: |
           echo "${{ secrets.STEAM_USER }}" > /tmp/steam_user
           echo "${{ secrets.STEAM_PASS }}" > /tmp/steam_pass
+          echo "${{ secrets.STEAM_GUARD }}" > /tmp/steam_guard
 
       - uses: docker/build-push-action@v6
         with:
@@ -51,7 +52,8 @@ jobs:
           secrets: |
             steam_user=/tmp/steam_user
             steam_pass=/tmp/steam_pass
+            steam_guard=/tmp/steam_guard
 
       - name: Cleanup credentials
         if: always()
-        run: rm -f /tmp/steam_user /tmp/steam_pass
+        run: rm -f /tmp/steam_user /tmp/steam_pass /tmp/steam_guard
