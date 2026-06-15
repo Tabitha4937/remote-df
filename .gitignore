@@ -1,0 +1,34 @@
+# DF game distribution — closed-source binary + assets (~80 MB).
+# Downloaded at deploy time on the remote host (see scripts/deploy.sh).
+# Only track the open-source wrapper (g_src/), our config (prefs/), and
+# the init defaults that the Dockerfile patches.
+df/*
+!df/g_src/
+!df/prefs/
+!df/data/
+df/data/*
+!df/data/init/
+df/data/init/macros/
+
+# Downloaded tarballs
+df.tar.bz2
+
+# WASM exploration tools (shelved)
+c2w/
+
+# Build outputs
+out/
+*.wasm
+node_modules/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+
+# Runtime logs and screenshots
+/var/log/
+shot*.png
+df_*.png

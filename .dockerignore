@@ -1,0 +1,13 @@
+# Keep the build context small — only df/ and docker/ are needed.
+.git
+.gitignore
+.dockerignore
+README.md
+LICENSE
+scripts/
+c2w/
+out/
+web/
+df.tar.bz2
+**/.DS_Store
+shot*.png
