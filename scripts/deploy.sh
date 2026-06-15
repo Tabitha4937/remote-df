@@ -24,6 +24,7 @@ if [ "$DF_EDITION" = "steam" ]; then
   trap 'rm -f /tmp/.steam_user /tmp/.steam_pass' EXIT
   HERE="$(cd "$(dirname "$0")/.." && pwd)"
   docker build \
+    --platform linux/amd64 \
     --build-arg DF_VERSION="$DF_VERSION" \
     --build-arg DF_EDITION=steam \
     --secret id=steam_user,src=/tmp/.steam_user \
