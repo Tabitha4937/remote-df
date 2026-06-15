@@ -1,8 +1,17 @@
-# Native amd64 image for Dwarf Fortress (Classic build).
+# Native amd64 image for Dwarf Fortress (Classic or Steam/premium).
 #
 # The DF engine (dwarfort) is a closed-source x86-64 ELF. This image runs it
 # natively on amd64 Linux, renders through TigerVNC's Xvnc (software SDL2), and
 # streams the display over noVNC. Build/run on an amd64 host.
+#
+# Editions:
+#   classic (default) — free download from Bay12 Games
+#   steam             — premium version via SteamCMD (requires valid purchase)
+#     Build with:
+#       echo "myuser" > /tmp/steam_user && echo "mypass" > /tmp/steam_pass
+#       docker build --build-arg DF_EDITION=steam \
+#         --secret id=steam_user,src=/tmp/steam_user \
+#         --secret id=steam_pass,src=/tmp/steam_pass ...
 
 # --- stage 1: build SDL2 with XInput2 compiled out -------------------------
 # DF's SDL2 reads the mouse via XInput2 *raw* events, which VNC-injected input
@@ -45,14 +54,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       matchbox-window-manager xdotool \
     && rm -rf /var/lib/apt/lists/*
 
-# Game files (the closed-source binary + data + bundled .so libs).
-# Downloaded from Bay12 Games at build time.
+# Game files — classic from Bay12, or steam via SteamCMD.
+ARG DF_EDITION=classic
 ARG DF_VERSION=53_14
 ARG DF_URL=https://www.bay12games.com/dwarves/df_${DF_VERSION}_linux.tar.bz2
-RUN mkdir -p /opt/df \
-    && curl -fsSL "$DF_URL" -o /tmp/df.tar.bz2 \
-    && tar -xjf /tmp/df.tar.bz2 -C /opt/df \
-    && rm /tmp/df.tar.bz2
+RUN --mount=type=secret,id=steam_user \
+    --mount=type=secret,id=steam_pass \
+    set -e && mkdir -p /opt/df && \
+    if [ "$DF_EDITION" = "classic" ]; then \
+      curl -fsSL "$DF_URL" -o /tmp/df.tar.bz2 && \
+      tar -xjf /tmp/df.tar.bz2 -C /opt/df && \
+      rm /tmp/df.tar.bz2; \
+    elif [ "$DF_EDITION" = "steam" ]; then \
+      dpkg --add-architecture i386 && \
+      apt-get update && \
+      apt-get install -y --no-install-recommends lib32gcc-s1 && \
+      curl -fsSL "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" \
+        | tar -xz -C /tmp && \
+      /tmp/steamcmd/steamcmd.sh \
+        +@sSteamCmdForcePlatformType linux \
+        +force_install_dir /opt/df \
+        +login "$(cat /run/secrets/steam_user)" "$(cat /run/secrets/steam_pass)" \
+        +app_update 975370 validate \
+        +quit && \
+      rm -rf /tmp/steamcmd /var/lib/apt/lists/*; \
+    else \
+      echo "Unknown DF_EDITION: $DF_EDITION" >&2; exit 1; \
+    fi
 # DFHack — mod framework for Dwarf Fortress.
 # Extracted over the DF directory; provides the ./dfhack launcher script.
 ARG DFHACK_VERSION=53.14-r2
@@ -60,7 +88,7 @@ RUN curl -fsSL "https://github.com/DFHack/dfhack/releases/download/${DFHACK_VERS
       -o /tmp/dfhack.tar.bz2 \
     && tar -xjf /tmp/dfhack.tar.bz2 -C /opt/df \
     && rm /tmp/dfhack.tar.bz2
-LABEL df.version="${DF_VERSION}" dfhack.version="${DFHACK_VERSION}"
+LABEL df.version="${DF_VERSION}" df.edition="${DF_EDITION}" dfhack.version="${DFHACK_VERSION}"
 
 # Override the bundled/system SDL2 with our XInput2-free build (see stage 1).
 # DF loads this first via LD_LIBRARY_PATH=/opt/df; ABI-compatible with the
