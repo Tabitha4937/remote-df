@@ -58,29 +58,39 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ARG DF_EDITION=classic
 ARG DF_VERSION=53_14
 ARG DF_URL=https://www.bay12games.com/dwarves/df_${DF_VERSION}_linux.tar.bz2
-RUN --mount=type=secret,id=steam_user \
-    --mount=type=secret,id=steam_pass \
-    set -e && mkdir -p /opt/df && \
-    if [ "$DF_EDITION" = "classic" ]; then \
+
+# Classic edition: download from Bay12.
+RUN if [ "$DF_EDITION" = "classic" ]; then \
+      mkdir -p /opt/df && \
       curl -fsSL "$DF_URL" -o /tmp/df.tar.bz2 && \
       tar -xjf /tmp/df.tar.bz2 -C /opt/df && \
       rm /tmp/df.tar.bz2; \
-    elif [ "$DF_EDITION" = "steam" ]; then \
+    fi
+
+# Steam edition: download via SteamCMD (requires build secrets).
+RUN --mount=type=secret,id=steam_user \
+    --mount=type=secret,id=steam_pass \
+    if [ "$DF_EDITION" = "steam" ]; then \
+      set -e && mkdir -p /opt/df && \
       dpkg --add-architecture i386 && \
       apt-get update && \
       apt-get install -y --no-install-recommends lib32gcc-s1 && \
-      mkdir -p /tmp/steamcmd && \
+      mkdir -p /tmp/steamcmd /root && \
       curl -fsSL "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" \
         | tar -xz -C /tmp/steamcmd && \
-      /tmp/steamcmd/steamcmd.sh \
+      HOME=/root /tmp/steamcmd/steamcmd.sh \
         +@sSteamCmdForcePlatformType linux \
         +force_install_dir /opt/df \
         +login "$(cat /run/secrets/steam_user)" "$(cat /run/secrets/steam_pass)" \
         +app_update 975370 validate \
         +quit && \
       rm -rf /tmp/steamcmd /var/lib/apt/lists/*; \
-    else \
-      echo "Unknown DF_EDITION: $DF_EDITION" >&2; exit 1; \
+    fi
+
+# Validate we got the game binary.
+RUN if [ ! -f /opt/df/dwarfort ]; then \
+      echo "ERROR: /opt/df/dwarfort not found. Check DF_EDITION=$DF_EDITION" >&2; \
+      exit 1; \
     fi
 # DFHack — mod framework for Dwarf Fortress (classic edition only).
 # Extracted over the DF directory; provides the ./dfhack launcher script.
