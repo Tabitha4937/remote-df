@@ -15,12 +15,13 @@ host at full native speed, streamed to your browser over noVNC with audio via HT
 Your machine                         Remote x86-64 Linux host (ssh <remote>)
 ┌──────────────────┐                 ┌──────────────────────────────────────────────────┐
 │ Browser          │                 │ Docker container                                  │
-│  noVNC <canvas> ─┼── SSH tunnel ──▶│  websockify :6080 ─ Xvnc :5900                   │
-│  localhost:6080  │   (loopback)    │     └─ Xvnc :99 ◀─ dwarfort (PRINT_MODE:2D)      │
-│                  │                 │  PulseAudio (virtual sink)                        │
-│  <audio> ────────┼── SSH tunnel ──▶│     └─ ffmpeg Opus/WebM :8080                    │
-│  localhost:8080  │                 │  saves → docker volume df_saves                   │
-└──────────────────┘                 └──────────────────────────────────────────────────┘
+│  noVNC <canvas> ─┼── SSH tunnel ──▶│  nginx :6080                                      │
+│  <audio> src=    │   (loopback)    │   ├─ /          → custom index.html (VNC + audio) │
+│  /audio          │                 │   ├─ /websockify → websockify → Xvnc :5900         │
+│  localhost:6080  │                 │   └─ /audio      → ffmpeg Opus/WebM (internal)     │
+└──────────────────┘                 │  PulseAudio (virtual sink) ◀─ dwarfort             │
+                                     │  saves → docker volume df_saves                    │
+                                     └──────────────────────────────────────────────────┘
 ```
 
 Nothing is exposed publicly: the container binds to `127.0.0.1`, and you reach it
@@ -101,8 +102,10 @@ same way.
 ### Audio Streaming
 
 A **PulseAudio** virtual null sink captures DF's audio output (via `SDL_AUDIODRIVER=pulse`).
-**ffmpeg** reads from the PulseAudio monitor source, encodes to Opus/WebM at 96kbps,
-and serves it as an HTTP stream on port 8080. Latency is ~100-200ms.
+**ffmpeg** reads from the PulseAudio monitor source, encodes to Opus/WebM at 96kbps, and serves
+it internally. **nginx** proxies it at `/audio` on the same port as noVNC, and the custom
+`index.html` landing page embeds an `<audio src="/audio">` element — so video and audio
+are in the same browser tab with no extra ports or URLs. Latency is ~100-200ms.
 
 ### Custom SDL2 Build
 
@@ -121,9 +124,8 @@ so worlds and fortresses survive redeploys.
 | Variable     | Default    | Description                                      |
 | ------------ | ---------- | ------------------------------------------------ |
 | `GEOM`       | `1280x800` | Virtual display resolution                       |
-| `VNC_PORT`   | `5900`     | VNC server port                                  |
-| `WEB_PORT`   | `6080`     | noVNC web port                                   |
-| `AUDIO_PORT` | `8080`     | Audio stream port                                |
+| `VNC_PORT`   | `5900`     | VNC server port (internal)                       |
+| `WEB_PORT`   | `6080`     | nginx port (noVNC + audio, tunneled to browser)  |
 | `DF_VERSION` | `53_14`    | DF version (used in image tags and download URL) |
 | `DF_EDITION` | `classic`  | `classic` or `steam`                             |
 

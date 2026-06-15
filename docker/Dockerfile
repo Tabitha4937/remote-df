@@ -43,7 +43,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libsdl2-2.0-0 libsdl2-image-2.0-0 \
       libgl1 libglu1-mesa libgl1-mesa-dri \
       tigervnc-standalone-server tigervnc-common x11-utils x11-apps \
-      websockify novnc \
+      websockify novnc nginx \
       procps imagemagick \
       curl ca-certificates bzip2 \
       pulseaudio ffmpeg \
@@ -136,7 +136,13 @@ RUN mkdir -p /opt/df/prefs && \
 COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
-EXPOSE 5900 6080 8080
+# nginx: unified reverse proxy serving noVNC + WebSocket + audio under port 6080.
+COPY docker/nginx.conf /etc/nginx/conf.d/df.conf
+RUN rm -f /etc/nginx/sites-enabled/default
+RUN mkdir -p /opt/novnc-custom
+COPY docker/index.html /opt/novnc-custom/index.html
+
+EXPOSE 5900 6080
 ENV DISPLAY=:99 \
     TERM=xterm \
     SDL_VIDEODRIVER=x11 \

@@ -66,9 +66,12 @@ echo "[start] keep keyboard focus on the DF window (no reparenting WM)"
     sleep 2
   done ) >/var/log/df/focus.log 2>&1 &
 
-echo "[start] noVNC/websockify on :$WEB_PORT -> localhost:$VNC_PORT"
-websockify --web /usr/share/novnc "$WEB_PORT" "localhost:$VNC_PORT" \
+echo "[start] noVNC/websockify on internal :6081 -> localhost:$VNC_PORT"
+websockify 6081 "localhost:$VNC_PORT" \
        >/var/log/df/websockify.log 2>&1 &
+
+echo "[start] nginx on :$WEB_PORT (noVNC + audio unified)"
+nginx -g 'daemon off;' >/var/log/df/nginx.log 2>&1 &
 
 echo "[start] launching Dwarf Fortress (PRINT_MODE:2D, SOUND:YES); auto-restart on exit"
 cd /opt/df
@@ -89,4 +92,4 @@ EDITION=$(cat /opt/df/.edition 2>/dev/null || echo classic)
   done
 ) &
 
-exec tail -F /var/log/df/df.log /var/log/df/xvnc.log /var/log/df/audio.log 2>/dev/null
+exec tail -F /var/log/df/df.log /var/log/df/xvnc.log /var/log/df/audio.log /var/log/df/nginx.log 2>/dev/null
