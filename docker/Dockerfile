@@ -36,7 +36,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       tigervnc-standalone-server tigervnc-common x11-utils x11-apps \
       websockify novnc \
       procps imagemagick \
-      curl ca-certificates \
+      curl ca-certificates bzip2 \
     && rm -rf /var/lib/apt/lists/*
 
 # A tiny window manager so the SDL window gets input focus (keyboard) and is
