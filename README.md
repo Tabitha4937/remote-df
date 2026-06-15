@@ -4,6 +4,19 @@ Play [Dwarf Fortress](https://www.bay12games.com/dwarves/) (Classic or Steam edi
 in a web browser with audio. DF runs as a Docker container on a remote x86-64 Linux
 host at full native speed, streamed to your browser over noVNC with audio via HTTP.
 
+| Classic | Steam (Premium) |
+| --- | --- |
+| ![Classic edition](docs/screenshots/classic-2.png) | ![Steam edition](docs/screenshots/steam-2.png) |
+
+<details>
+<summary>More screenshots</summary>
+
+| Classic — title screen | Steam — title screen |
+| --- | --- |
+| ![Classic title](docs/screenshots/classic-1.png) | ![Steam title](docs/screenshots/steam-1.png) |
+
+</details>
+
 ## Architecture
 
 ```
