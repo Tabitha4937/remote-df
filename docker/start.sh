@@ -17,7 +17,6 @@ export DISPLAY=:99
 GEOM="${GEOM:-1280x800}"
 VNC_PORT="${VNC_PORT:-5900}"
 WEB_PORT="${WEB_PORT:-6080}"
-AUDIO_PORT="${AUDIO_PORT:-8080}"
 mkdir -p /var/log/df
 
 # --- PulseAudio virtual sink ------------------------------------------------
@@ -37,13 +36,17 @@ done
 # Set the virtual sink as default so SDL/fmod use it.
 pactl set-default-sink virtual_out 2>/dev/null || true
 
-# --- Audio stream via ffmpeg -------------------------------------------------
-echo "[start] audio stream on :$AUDIO_PORT (Opus/WebM via ffmpeg)"
+# --- Audio stream via ffmpeg ------------------------------------------------
+# Ogg/Opus: best cross-browser support (works in Firefox, Chrome, Edge).
+# Write to a named FIFO; nginx serves it via the /audio location.
+echo "[start] audio stream (Ogg/Opus via ffmpeg -> /tmp/audio.ogg fifo)"
+rm -f /tmp/audio.ogg
+mkfifo /tmp/audio.ogg
 ffmpeg -nostdin -f pulse -i virtual_out.monitor \
-  -ac 2 -b:a 96k -c:a libopus -f webm \
-  -content_type audio/webm \
-  -listen 1 "http://0.0.0.0:${AUDIO_PORT}" \
-  >/var/log/df/audio.log 2>&1 &
+  -ac 2 -b:a 96k -c:a libopus -f ogg \
+  -page_duration 200000 \
+  - > /tmp/audio.ogg \
+  2>/var/log/df/audio.log &
 
 echo "[start] Xvnc ${GEOM} on :99 (rfb :$VNC_PORT)"
 Xvnc :99 -geometry "$GEOM" -depth 24 \
