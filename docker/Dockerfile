@@ -46,6 +46,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       websockify novnc \
       procps imagemagick \
       curl ca-certificates bzip2 \
+      pulseaudio ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # A tiny window manager so the SDL window gets input focus (keyboard) and is
@@ -121,25 +122,25 @@ COPY --from=sdlbuild /sdl/libSDL2-2.0.so.0 /opt/df/libSDL2-2.0.so.0
 # Runtime config. The engine reads overrides from prefs/init.txt, but we also
 # patch the shipped defaults so the settings apply no matter which file wins.
 #   PRINT_MODE:2D  -> software-capable SDL2 renderer (no real GPU needed)
-#   SOUND:NO       -> don't init fmod/audio (saves CPU; no audio device anyway)
+#   SOUND:YES      -> audio via PulseAudio virtual sink, streamed over HTTP
 #   WINDOWED:YES   -> fixed window, maximized by the WM to fill the screen
 RUN mkdir -p /opt/df/prefs && \
     sed -i \
       -e 's/\[PRINT_MODE:[^]]*\]/[PRINT_MODE:2D]/' \
-      -e 's/\[SOUND:[^]]*\]/[SOUND:NO]/' \
+      -e 's/\[SOUND:[^]]*\]/[SOUND:YES]/' \
       -e 's/\[WINDOWED:[^]]*\]/[WINDOWED:YES]/' \
       /opt/df/data/init/init_default.txt && \
-    printf '[PRINT_MODE:2D]\n[SOUND:NO]\n[WINDOWED:YES]\n[FPS_CAP:30]\n[G_FPS_CAP:20]\n' \
+    printf '[PRINT_MODE:2D]\n[SOUND:YES]\n[WINDOWED:YES]\n[FPS_CAP:30]\n[G_FPS_CAP:20]\n[VOLUME:200]\n' \
       > /opt/df/prefs/init.txt
 
 COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
-EXPOSE 5900 6080
+EXPOSE 5900 6080 8080
 ENV DISPLAY=:99 \
     TERM=xterm \
     SDL_VIDEODRIVER=x11 \
-    SDL_AUDIODRIVER=dummy \
+    SDL_AUDIODRIVER=pulse \
     SDL_RENDER_DRIVER=software \
     LD_LIBRARY_PATH=/opt/df
 ENTRYPOINT ["/usr/local/bin/start.sh"]

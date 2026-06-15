@@ -8,12 +8,14 @@ DF_VERSION="${DF_VERSION:-53_14}"
 IMAGE="${IMAGE:-remote-df:df-${DF_VERSION}}"
 WEB_PORT="${WEB_PORT:-6080}"
 VNC_PORT="${VNC_PORT:-5900}"
+AUDIO_PORT="${AUDIO_PORT:-8080}"
 
 docker rm -f "$NAME" 2>/dev/null || true
 docker run -d --name "$NAME" \
   --restart unless-stopped \
   -p "127.0.0.1:${WEB_PORT}:6080" \
   -p "127.0.0.1:${VNC_PORT}:5900" \
+  -p "127.0.0.1:${AUDIO_PORT}:8080" \
   -v df_saves:/opt/df/data/save \
   "$IMAGE"
 

@@ -9,11 +9,15 @@ if [ -z "${1:-}" ]; then
 fi
 REMOTE="$1"
 PORT="${PORT:-6080}"
+AUDIO_PORT="${AUDIO_PORT:-8080}"
 URL="http://localhost:${PORT}/vnc.html?autoconnect=1&resize=scale"
 
-# Drop any existing forward on PORT, then establish a fresh background tunnel.
+# Drop any existing forward on PORT/AUDIO_PORT, then establish fresh tunnels.
 lsof -ti "tcp:${PORT}" 2>/dev/null | xargs kill -9 2>/dev/null || true
-ssh -fNL "${PORT}:localhost:${PORT}" "$REMOTE"
-echo "Tunnel up: localhost:${PORT} -> ${REMOTE}:${PORT}"
+lsof -ti "tcp:${AUDIO_PORT}" 2>/dev/null | xargs kill -9 2>/dev/null || true
+ssh -fNL "${PORT}:localhost:${PORT}" -L "${AUDIO_PORT}:localhost:${AUDIO_PORT}" "$REMOTE"
+echo "Tunnel up: localhost:${PORT} -> ${REMOTE}:${PORT} (VNC)"
+echo "           localhost:${AUDIO_PORT} -> ${REMOTE}:${AUDIO_PORT} (audio)"
 echo "Opening ${URL}"
+echo "Audio stream: http://localhost:${AUDIO_PORT}"
 ( command -v open >/dev/null && open "$URL" ) || echo "Open this URL: ${URL}"

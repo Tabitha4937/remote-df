@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Boot the display stack, then Dwarf Fortress.
+# Boot the display stack, audio streaming, then Dwarf Fortress.
 #
 # We use TigerVNC's Xvnc (a real X server with integrated VNC) for display+VNC.
 # The SDL2/XInput2 input problem (cursor never registers over VNC) is handled in
 # the Dockerfile by shadowing libXi for DF (see there); no X-server flag works
 # because Xvnc refuses to disable the XInput extension at runtime.
+#
+# Audio: PulseAudio virtual sink -> ffmpeg Opus encode -> HTTP stream on :8080.
 #
 # DF is auto-restarted if it exits/crashes (a streamed instance should return
 # to the title, not die).
@@ -15,7 +17,33 @@ export DISPLAY=:99
 GEOM="${GEOM:-1280x800}"
 VNC_PORT="${VNC_PORT:-5900}"
 WEB_PORT="${WEB_PORT:-6080}"
+AUDIO_PORT="${AUDIO_PORT:-8080}"
 mkdir -p /var/log/df
+
+# --- PulseAudio virtual sink ------------------------------------------------
+echo "[start] PulseAudio (virtual sink, no hardware needed)"
+export XDG_RUNTIME_DIR=/tmp/pulse-runtime
+mkdir -p "$XDG_RUNTIME_DIR"
+# Minimal PulseAudio config: null sink (no real audio device), TCP disabled.
+pulseaudio --daemonize --exit-idle-time=-1 \
+  --load="module-null-sink sink_name=virtual_out sink_properties=device.description=VirtualOutput" \
+  --load="module-always-sink" \
+  >/var/log/df/pulse.log 2>&1 || true
+# Wait for PulseAudio to come up.
+for _ in $(seq 1 50); do
+  pactl info >/dev/null 2>&1 && break
+  sleep 0.1
+done
+# Set the virtual sink as default so SDL/fmod use it.
+pactl set-default-sink virtual_out 2>/dev/null || true
+
+# --- Audio stream via ffmpeg -------------------------------------------------
+echo "[start] audio stream on :$AUDIO_PORT (Opus/WebM via ffmpeg)"
+ffmpeg -nostdin -f pulse -i virtual_out.monitor \
+  -ac 2 -b:a 96k -c:a libopus -f webm \
+  -content_type audio/webm \
+  -listen 1 "http://0.0.0.0:${AUDIO_PORT}" \
+  >/var/log/df/audio.log 2>&1 &
 
 echo "[start] Xvnc ${GEOM} on :99 (rfb :$VNC_PORT)"
 Xvnc :99 -geometry "$GEOM" -depth 24 \
@@ -42,7 +70,7 @@ echo "[start] noVNC/websockify on :$WEB_PORT -> localhost:$VNC_PORT"
 websockify --web /usr/share/novnc "$WEB_PORT" "localhost:$VNC_PORT" \
        >/var/log/df/websockify.log 2>&1 &
 
-echo "[start] launching Dwarf Fortress via DFHack (PRINT_MODE:2D, SOUND:NO); auto-restart on exit"
+echo "[start] launching Dwarf Fortress (PRINT_MODE:2D, SOUND:YES); auto-restart on exit"
 cd /opt/df
 EDITION=$(cat /opt/df/.edition 2>/dev/null || echo classic)
 (
@@ -61,4 +89,4 @@ EDITION=$(cat /opt/df/.edition 2>/dev/null || echo classic)
   done
 ) &
 
-exec tail -F /var/log/df/df.log /var/log/df/xvnc.log 2>/dev/null
+exec tail -F /var/log/df/df.log /var/log/df/xvnc.log /var/log/df/audio.log 2>/dev/null
