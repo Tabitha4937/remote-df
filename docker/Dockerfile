@@ -82,14 +82,19 @@ RUN --mount=type=secret,id=steam_user \
     else \
       echo "Unknown DF_EDITION: $DF_EDITION" >&2; exit 1; \
     fi
-# DFHack — mod framework for Dwarf Fortress.
+# DFHack — mod framework for Dwarf Fortress (classic edition only).
 # Extracted over the DF directory; provides the ./dfhack launcher script.
 ARG DFHACK_VERSION=53.14-r2
-RUN curl -fsSL "https://github.com/DFHack/dfhack/releases/download/${DFHACK_VERSION}/dfhack-${DFHACK_VERSION}-Linux-64bit.tar.bz2" \
-      -o /tmp/dfhack.tar.bz2 \
-    && tar -xjf /tmp/dfhack.tar.bz2 -C /opt/df \
-    && rm /tmp/dfhack.tar.bz2
+RUN if [ "$DF_EDITION" = "classic" ]; then \
+      curl -fsSL "https://github.com/DFHack/dfhack/releases/download/${DFHACK_VERSION}/dfhack-${DFHACK_VERSION}-Linux-64bit.tar.bz2" \
+        -o /tmp/dfhack.tar.bz2 && \
+      tar -xjf /tmp/dfhack.tar.bz2 -C /opt/df && \
+      rm /tmp/dfhack.tar.bz2; \
+    fi
 LABEL df.version="${DF_VERSION}" df.edition="${DF_EDITION}" dfhack.version="${DFHACK_VERSION}"
+
+# Store edition so start.sh knows how to launch the game.
+RUN echo "$DF_EDITION" > /opt/df/.edition
 
 # Override the bundled/system SDL2 with our XInput2-free build (see stage 1).
 # DF loads this first via LD_LIBRARY_PATH=/opt/df; ABI-compatible with the

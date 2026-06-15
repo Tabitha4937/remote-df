@@ -44,14 +44,19 @@ websockify --web /usr/share/novnc "$WEB_PORT" "localhost:$VNC_PORT" \
 
 echo "[start] launching Dwarf Fortress via DFHack (PRINT_MODE:2D, SOUND:NO); auto-restart on exit"
 cd /opt/df
+EDITION=$(cat /opt/df/.edition 2>/dev/null || echo classic)
 (
   while true; do
-    # Load DFHack via LD_PRELOAD directly, bypassing the dfhack launcher
-    # script whose setarch call fails in Docker (no SYS_ADMIN capability).
-    LD_PRELOAD=./hack/libdfhack.so \
-    LD_LIBRARY_PATH=/opt/df:./hack/libs:./hack \
-      ./dwarfort >>/var/log/df/df.log 2>&1
-    echo "[start] !!! dwarfort+dfhack exited rc=$? — restarting in 2s" >>/var/log/df/df.log
+    if [ "$EDITION" = "classic" ] && [ -f ./hack/libdfhack.so ]; then
+      # Load DFHack via LD_PRELOAD directly, bypassing the dfhack launcher
+      # script whose setarch call fails in Docker (no SYS_ADMIN capability).
+      LD_PRELOAD=./hack/libdfhack.so \
+      LD_LIBRARY_PATH=/opt/df:./hack/libs:./hack \
+        ./dwarfort >>/var/log/df/df.log 2>&1
+    else
+      LD_LIBRARY_PATH=/opt/df ./dwarfort >>/var/log/df/df.log 2>&1
+    fi
+    echo "[start] !!! dwarfort exited rc=$? — restarting in 2s" >>/var/log/df/df.log
     sleep 2
   done
 ) &

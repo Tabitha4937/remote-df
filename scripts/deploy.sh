@@ -26,7 +26,6 @@ if [ "$DF_EDITION" = "steam" ]; then
   docker build \
     --build-arg DF_VERSION="$DF_VERSION" \
     --build-arg DF_EDITION=steam \
-    --build-arg DFHACK_VERSION="${DFHACK_VERSION:-53.14-r2}" \
     --secret id=steam_user,src=/tmp/.steam_user \
     --secret id=steam_pass,src=/tmp/.steam_pass \
     -f "$HERE/docker/Dockerfile" \

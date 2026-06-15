@@ -48,7 +48,6 @@ jobs:
           build-args: |
             DF_EDITION=steam
             DF_VERSION=${{ env.DF_VERSION }}
-            DFHACK_VERSION=${{ env.DFHACK_VERSION }}
           secrets: |
             steam_user=/tmp/steam_user
             steam_pass=/tmp/steam_pass
