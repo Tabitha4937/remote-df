@@ -23,10 +23,15 @@ x-common: &common
     - "127.0.0.1:${WEB_PORT:-6080}:6080"
     - "127.0.0.1:${VNC_PORT:-5900}:5900"
   volumes:
-    # Bind mount to a host directory so saves live on disk (easy to back up),
-    # not inside a docker-managed volume. Path is relative to this compose file
-    # unless DF_SAVES_DIR is set to an absolute path.
-    - "${DF_SAVES_DIR:-./saves}:/opt/df/data/save"
+    # DF v50 stores saves in the XDG user-data dir, NOT the game folder's
+    # data/save. The container runs as root, so that path is
+    # /root/.local/share/Bay 12 Games/Dwarf Fortress/save. Bind a host directory
+    # there so saves live on disk (easy to back up), not in a docker volume.
+    # Long syntax because the target path contains spaces. Source is relative to
+    # this compose file unless DF_SAVES_DIR is set to an absolute path.
+    - type: bind
+      source: "${DF_SAVES_DIR:-./saves}"
+      target: "/root/.local/share/Bay 12 Games/Dwarf Fortress/save"
   environment:
     GEOM: "${GEOM:-1280x800}"
   stop_grace_period: 10s

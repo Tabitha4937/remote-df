@@ -170,9 +170,11 @@ generates correctly.
 ### Persistent Saves
 
 Saves are bind-mounted from a host directory on the remote (`DF_SAVES_DIR`,
-default `~/remote-df/saves`) to `/opt/df/data/save` in the container — so worlds
-and fortresses live on disk, survive redeploys, and can be backed up or copied
-with ordinary file tools (no `docker volume` plumbing).
+default `~/remote-df/saves`) to DF v50's save location inside the container —
+`/root/.local/share/Bay 12 Games/Dwarf Fortress/save` (the XDG user-data dir,
+not the game folder's `data/save`). So worlds and fortresses live on disk,
+survive redeploys, and can be backed up or copied with ordinary file tools (no
+`docker volume` plumbing).
 
 ## Configuration
 
