@@ -55,6 +55,9 @@ pactl set-default-sink virtual_out 2>/dev/null || true
 # Icecast accepts the ffmpeg source on /df.ogg and serves it to many listeners
 # (nginx proxies it at /audio). Bound to loopback in docker/icecast.xml.
 echo "[start] Icecast audio server on internal :8000 (/df.ogg)"
+# Icecast drops from root to the icecast2 user (see icecast.xml <changeowner>),
+# which must be able to write its access/error logs into our shared log dir.
+chmod 777 /var/log/df
 icecast2 -c /etc/icecast2/icecast.xml >/var/log/df/icecast.log 2>&1 &
 # Wait for Icecast to accept connections before ffmpeg tries to push to it.
 # Any HTTP response means it's listening (the root path itself may 404).

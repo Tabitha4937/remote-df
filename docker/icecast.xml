@@ -54,5 +54,12 @@
 
     <security>
         <chroot>0</chroot>
+        <!-- Icecast refuses to run as root. The container has no other user, so
+             start as root and drop to the package's icecast2 user/group. start.sh
+             makes the log dir writable by it. -->
+        <changeowner>
+            <user>icecast2</user>
+            <group>icecast</group>
+        </changeowner>
     </security>
 </icecast>
