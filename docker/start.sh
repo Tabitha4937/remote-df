@@ -39,14 +39,25 @@ pactl set-default-sink virtual_out 2>/dev/null || true
 # --- Audio stream via ffmpeg ------------------------------------------------
 # Ogg/Opus: best cross-browser support (works in Firefox, Chrome, Edge).
 # ffmpeg serves on internal :8080; nginx proxies it at /audio.
-echo "[start] audio stream (Ogg/Opus via ffmpeg on internal :8080)"
-ffmpeg -nostdin -f pulse -i virtual_out.monitor \
-  -ac 2 -b:a 96k -c:a libopus -f ogg \
-  -page_duration 200000 \
-  -content_type audio/ogg \
-  -listen 1 -multiple_requests 1 \
-  "http://0.0.0.0:8080" \
-  >/var/log/df/audio.log 2>&1 &
+#
+# ffmpeg's `-listen 1` HTTP server handles one client at a time and can exit
+# when the client disconnects (e.g. a browser tab reload). Without a supervisor
+# it would stay dead and every /audio request would 502, so we relaunch it in a
+# loop — same pattern as dwarfort below.
+echo "[start] audio stream (Ogg/Opus via ffmpeg on internal :8080); auto-restart on exit"
+(
+  while true; do
+    ffmpeg -nostdin -f pulse -i virtual_out.monitor \
+      -ac 2 -b:a 96k -c:a libopus -f ogg \
+      -page_duration 200000 \
+      -content_type audio/ogg \
+      -listen 1 -multiple_requests 1 \
+      "http://0.0.0.0:8080" \
+      >>/var/log/df/audio.log 2>&1
+    echo "[start] !!! ffmpeg audio server exited rc=$? — restarting in 1s" >>/var/log/df/audio.log
+    sleep 1
+  done
+) &
 
 echo "[start] Xvnc ${GEOM} on :99 (rfb :$VNC_PORT)"
 Xvnc :99 -geometry "$GEOM" -depth 24 \
