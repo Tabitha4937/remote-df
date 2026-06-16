@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
-# Run on your LOCAL machine. Pulls the pre-built image from GHCR on the remote
-# host and (re)starts the DF container with persistent saves.
+# Run on your LOCAL machine. Syncs the build context to the remote x86-64 host
+# and uses Docker Compose there to BUILD and START the container — for either
+# edition. Saves persist in a host directory on the remote (bind mount), so they
+# survive redeploys and are easy to back up.
 #
-# For the steam edition, builds on the remote host (SteamCMD is x86-only):
+#   ./scripts/deploy.sh <host>                                   # classic
 #   DF_EDITION=steam STEAM_USER=x STEAM_PASS=y ./scripts/deploy.sh <host>
-# If Steam Guard (2FA) is enabled, also set STEAM_GUARD=<code>
+#   DF_EDITION=steam STEAM_USER=x STEAM_PASS=y STEAM_GUARD=ABC123 ./scripts/deploy.sh <host>
+#
+# Overrides: DF_VERSION, REMOTE_DIR (default ~/remote-df), DF_SAVES_DIR
+# (default <remote-dir>/saves on the remote).
 set -euo pipefail
 
 if [ -z "${1:-}" ]; then
@@ -14,47 +19,34 @@ fi
 REMOTE="$1"
 DF_VERSION="${DF_VERSION:-53_14}"
 DF_EDITION="${DF_EDITION:-classic}"
-REGISTRY="${REGISTRY:-ghcr.io}"
-IMAGE_NAME="${IMAGE_NAME:-sessa93/remote-df}"
-IMAGE="${REGISTRY}/${IMAGE_NAME}:df-${DF_VERSION}"
+REMOTE_DIR="${REMOTE_DIR:-remote-df}"
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 
+# Files the build + compose need on the remote (DF assets download at build time).
+echo "==> Syncing build context to $REMOTE:~/$REMOTE_DIR"
+ssh "$REMOTE" "mkdir -p ~/$REMOTE_DIR/docker ~/$REMOTE_DIR/secrets ~/$REMOTE_DIR/saves"
+scp -q "$HERE/docker/Dockerfile"   "$REMOTE:~/$REMOTE_DIR/docker/Dockerfile"
+scp -q "$HERE/docker/start.sh"     "$REMOTE:~/$REMOTE_DIR/docker/start.sh"
+scp -q "$HERE/docker/nginx.conf"   "$REMOTE:~/$REMOTE_DIR/docker/nginx.conf"
+scp -q "$HERE/docker/index.html"   "$REMOTE:~/$REMOTE_DIR/docker/index.html"
+scp -q "$HERE/docker-compose.yml"  "$REMOTE:~/$REMOTE_DIR/docker-compose.yml"
+scp -q "$HERE/.dockerignore"       "$REMOTE:~/$REMOTE_DIR/.dockerignore"
+
 if [ "$DF_EDITION" = "steam" ]; then
-  IMAGE="remote-df:df-${DF_VERSION}-steam"
-  echo "==> Building steam edition on $REMOTE (SteamCMD needs native x86_64)"
-  ssh "$REMOTE" "mkdir -p ~/remote-df/docker"
-  scp -q "$HERE/docker/Dockerfile"  "$REMOTE:~/remote-df/docker/Dockerfile"
-  scp -q "$HERE/docker/start.sh"    "$REMOTE:~/remote-df/docker/start.sh"
-  scp -q "$HERE/docker/nginx.conf"  "$REMOTE:~/remote-df/docker/nginx.conf"
-  scp -q "$HERE/docker/index.html"  "$REMOTE:~/remote-df/docker/index.html"
-  scp -q "$HERE/.dockerignore"      "$REMOTE:~/remote-df/.dockerignore"
-
-  ssh "$REMOTE" bash -s <<SCRIPT
-    set -euo pipefail
-    cd ~/remote-df
-    echo '${STEAM_USER:?Set STEAM_USER}' > /tmp/.steam_user
-    echo '${STEAM_PASS:?Set STEAM_PASS}' > /tmp/.steam_pass
-    echo '${STEAM_GUARD:-}' > /tmp/.steam_guard
-    trap 'rm -f /tmp/.steam_user /tmp/.steam_pass /tmp/.steam_guard' EXIT
-    docker build \
-      --build-arg DF_VERSION=${DF_VERSION} \
-      --build-arg DF_EDITION=steam \
-      --secret id=steam_user,src=/tmp/.steam_user \
-      --secret id=steam_pass,src=/tmp/.steam_pass \
-      --secret id=steam_guard,src=/tmp/.steam_guard \
-      -f docker/Dockerfile \
-      -t ${IMAGE} .
-    rm -f /tmp/.steam_user /tmp/.steam_pass /tmp/.steam_guard
-SCRIPT
-
-  echo "==> Starting container on $REMOTE"
-  ssh "$REMOTE" "IMAGE=${IMAGE} bash -s" < "$(dirname "$0")/remote-run.sh"
+  echo "==> Writing Steam credentials to $REMOTE (BuildKit secrets, never imaged)"
+  ssh "$REMOTE" "umask 077; \
+    printf '%s' '${STEAM_USER:?Set STEAM_USER}' > ~/$REMOTE_DIR/secrets/steam_user; \
+    printf '%s' '${STEAM_PASS:?Set STEAM_PASS}' > ~/$REMOTE_DIR/secrets/steam_pass; \
+    printf '%s' '${STEAM_GUARD:-}'              > ~/$REMOTE_DIR/secrets/steam_guard"
+  SERVICE="df-steam"
 else
-  echo "==> Pulling image on $REMOTE"
-  ssh "$REMOTE" "docker pull ${IMAGE}"
-
-  echo "==> Starting container on $REMOTE"
-  ssh "$REMOTE" "IMAGE=${IMAGE} bash -s" < "$(dirname "$0")/remote-run.sh"
+  SERVICE="df"
 fi
 
-echo "==> Done. Run ./scripts/connect.sh to tunnel + open it."
+echo "==> Building + starting '$SERVICE' on $REMOTE via Docker Compose"
+ssh "$REMOTE" "cd ~/$REMOTE_DIR && \
+  DF_VERSION='$DF_VERSION' ${DF_SAVES_DIR:+DF_SAVES_DIR='$DF_SAVES_DIR'} \
+  docker compose up -d --build $SERVICE"
+
+echo "==> Done. Saves persist on disk at $REMOTE:~/$REMOTE_DIR/${DF_SAVES_DIR:-saves}"
+echo "    Run ./scripts/connect.sh $REMOTE to tunnel + open it."

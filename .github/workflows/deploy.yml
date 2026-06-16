@@ -43,15 +43,17 @@ jobs:
 
             echo "==> (Re)starting container"
             NAME="df"
+            SAVES_DIR="\$HOME/remote-df/saves"
+            mkdir -p "\$SAVES_DIR"
             docker rm -f "\$NAME" 2>/dev/null || true
             docker run -d --name "\$NAME" \
               --restart unless-stopped \
               -p "127.0.0.1:6080:6080" \
               -p "127.0.0.1:5900:5900" \
-              -v df_saves:/opt/df/data/save \
+              -v "\$SAVES_DIR:/opt/df/data/save" \
               "${IMAGE}"
 
-            echo "==> Container '\$NAME' is up (loopback only)."
+            echo "==> Container '\$NAME' is up (loopback only). Saves: \$SAVES_DIR"
           SCRIPT
 
       - name: Cleanup SSH key

@@ -20,7 +20,7 @@ Your machine                         Remote x86-64 Linux host (ssh <remote>)
 │  /audio          │                 │   ├─ /websockify → websockify → Xvnc :5900         │
 │  localhost:6080  │                 │   └─ /audio      → ffmpeg Opus/WebM (internal)     │
 └──────────────────┘                 │  PulseAudio (virtual sink) ◀─ dwarfort             │
-                                     │  saves → docker volume df_saves                    │
+                                     │  saves → host dir (bind mount, on disk)            │
                                      └──────────────────────────────────────────────────┘
 ```
 
@@ -37,7 +37,8 @@ through an SSH tunnel.
 ## Quickstart (Classic Edition)
 
 ```bash
-# 1. Deploy — pulls the pre-built image from GHCR and starts the container
+# 1. Deploy — syncs the build context and uses Docker Compose on the remote to
+#    build + start the container (saves persist on disk under ~/remote-df/saves)
 ./scripts/deploy.sh <ssh-host>
 
 # 2. Open an SSH tunnel and launch it in your browser
@@ -48,15 +49,13 @@ through an SSH tunnel.
 
 ## Docker Compose
 
-If you prefer Compose over the scripts, run this **on the remote host** (it mirrors
-`remote-run.sh` — loopback-only ports, `df_saves` volume, auto-restart):
+`./scripts/deploy.sh` drives Compose on the remote for you. To run it by hand
+instead, do this **on the remote host** (loopback-only ports, auto-restart, and
+saves bind-mounted to a host directory on disk):
 
 ```bash
-# Classic — build locally and run
-docker compose up -d
-
-# …or pull the pre-built image from GHCR instead of building
-IMAGE=ghcr.io/sessa93/remote-df:df-53_14 docker compose up -d --pull always
+# Classic — build the image and run
+docker compose up -d --build
 
 # Steam — build on the host (SteamCMD needs native x86_64)
 echo myuser > secrets/steam_user
@@ -66,7 +65,8 @@ docker compose up -d --build df-steam
 ```
 
 Then tunnel in from your machine with `./scripts/connect.sh <host>`. Override
-`DF_VERSION`, `GEOM`, `WEB_PORT`, or `VNC_PORT` via the environment or a `.env` file.
+`DF_VERSION`, `GEOM`, `WEB_PORT`, `VNC_PORT`, or `DF_SAVES_DIR` (where saves live
+on disk, default `./saves`) via the environment or a `.env` file.
 
 ### Example: full classic deploy with Compose
 
@@ -79,9 +79,10 @@ cat > .env <<'EOF'
 DF_VERSION=53_14
 GEOM=1600x900
 WEB_PORT=6080
+DF_SAVES_DIR=./saves            # host dir for saves (created on first run)
 EOF
 
-docker compose up -d            # build the image and start the container
+docker compose up -d --build    # build the image and start the container
 docker compose logs -f df       # watch DF / Xvnc / audio boot (Ctrl-C to detach)
 
 # --- back on your local machine ---
@@ -94,8 +95,8 @@ Day-to-day:
 ```bash
 docker compose ps               # is it up?
 docker compose restart df       # bounce it
-IMAGE=ghcr.io/sessa93/remote-df:df-53_14 docker compose up -d --pull always  # update from GHCR
-docker compose down             # stop & remove (saves persist in the df_saves volume)
+docker compose up -d --build    # rebuild (e.g. new DF_VERSION) and restart
+docker compose down             # stop & remove (saves persist in the host saves dir)
 ```
 
 ## Steam Edition
@@ -138,8 +139,8 @@ Images are published to `ghcr.io/sessa93/remote-df` with tags:
 | ------------------------------------------------ | -------------------------------------------------------------------------------- |
 | [`docker/Dockerfile`](docker/Dockerfile)         | Multi-stage amd64 image: custom SDL2 + DF + audio + Xvnc + noVNC                 |
 | [`docker/start.sh`](docker/start.sh)             | Entrypoint: PulseAudio, ffmpeg audio stream, display stack, DF with auto-restart |
-| [`scripts/deploy.sh`](scripts/deploy.sh)         | Deploy to remote host (classic: pull from GHCR; steam: build on remote)          |
-| [`scripts/remote-run.sh`](scripts/remote-run.sh) | `docker run` with saves volume + restart policy (runs on the remote)             |
+| [`scripts/deploy.sh`](scripts/deploy.sh)         | Sync build context + `docker compose up --build` on the remote (both editions)   |
+| [`docker-compose.yml`](docker-compose.yml)       | Build/run both editions; saves bind-mounted to a host dir; loopback ports        |
 | [`scripts/connect.sh`](scripts/connect.sh)       | SSH tunnel (VNC + audio) + open browser (run from your machine)                  |
 | [`df/g_src/`](df/g_src/)                         | Open-source platform/render wrapper (from Bay 12)                                |
 
@@ -168,8 +169,10 @@ generates correctly.
 
 ### Persistent Saves
 
-Saves persist in the `df_saves` Docker volume (mounted at `/opt/df/data/save`),
-so worlds and fortresses survive redeploys.
+Saves are bind-mounted from a host directory on the remote (`DF_SAVES_DIR`,
+default `~/remote-df/saves`) to `/opt/df/data/save` in the container — so worlds
+and fortresses live on disk, survive redeploys, and can be backed up or copied
+with ordinary file tools (no `docker volume` plumbing).
 
 ## Configuration
 

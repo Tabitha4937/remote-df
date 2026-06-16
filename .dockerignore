@@ -8,6 +8,7 @@ LICENSE
 scripts/
 docker-compose.yml
 secrets/
+saves/
 c2w/
 df/
 out/

@@ -13,6 +13,10 @@ out/
 *.wasm
 node_modules/
 
+# Local Compose state: saved games (bind mount) and a personal .env
+/saves/
+.env
+
 # OS / editor
 .DS_Store
 Thumbs.db
