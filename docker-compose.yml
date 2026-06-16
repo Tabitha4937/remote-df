@@ -12,9 +12,10 @@
 #   echo ABC123 > secrets/steam_guard        # empty unless Steam Guard 2FA is on
 #   docker compose up -d --build df-steam     # name the service (don't use --profile)
 #
-# Saves persist on disk at ${DF_SAVES_DIR:-./saves} (relative to this file).
-# Common overrides (env or .env file): DF_VERSION, GEOM, WEB_PORT, VNC_PORT,
-# DF_SAVES_DIR.
+# Saves persist on disk at ${DF_SAVES_DIR:-./saves}; periodic backup tarballs at
+# ${DF_BACKUPS_DIR:-./backups} (both relative to this file). Common overrides
+# (env or .env file): DF_VERSION, GEOM, WEB_PORT, VNC_PORT, DF_SAVES_DIR,
+# DF_BACKUPS_DIR, DF_CPUS, DF_MEMORY, BACKUP_INTERVAL, BACKUP_KEEP, DF_AUTOPAUSE.
 
 x-common: &common
   restart: unless-stopped
@@ -32,8 +33,26 @@ x-common: &common
     - type: bind
       source: "${DF_SAVES_DIR:-./saves}"
       target: "/root/.local/share/Bay 12 Games/Dwarf Fortress/save"
+    # Periodic save-backup tarballs (browse/download at /backups).
+    - type: bind
+      source: "${DF_BACKUPS_DIR:-./backups}"
+      target: /backups
   environment:
     GEOM: "${GEOM:-1280x800}"
+    BACKUP_INTERVAL: "${BACKUP_INTERVAL:-1800}"
+    BACKUP_KEEP: "${BACKUP_KEEP:-48}"
+    DF_AUTOPAUSE: "${DF_AUTOPAUSE:-1}"
+  # Keep a runaway dwarfort from taking down the host. Override via env.
+  cpus: ${DF_CPUS:-2.0}
+  mem_limit: ${DF_MEMORY:-3g}
+  pids_limit: 512
+  # Mark unhealthy if the web entrypoint stops responding.
+  healthcheck:
+    test: ["CMD-SHELL", "curl -fsS http://localhost:6080/ >/dev/null || exit 1"]
+    interval: 30s
+    timeout: 5s
+    retries: 3
+    start_period: 40s
   stop_grace_period: 10s
 
 services:

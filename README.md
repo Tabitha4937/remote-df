@@ -18,9 +18,11 @@ Your machine                         Remote x86-64 Linux host (ssh <remote>)
 │  noVNC <canvas> ─┼── SSH tunnel ──▶│  nginx :6080                                      │
 │  <audio> src=    │   (loopback)    │   ├─ /          → custom index.html (VNC + audio) │
 │  /audio          │                 │   ├─ /websockify → websockify → Xvnc :5900         │
-│  localhost:6080  │                 │   └─ /audio      → ffmpeg Opus/WebM (internal)     │
+│  localhost:6080  │                 │   ├─ /audio      → Icecast ◀─ ffmpeg (internal)    │
+│                  │                 │   └─ /saves /backups /logs → browse/download       │
 └──────────────────┘                 │  PulseAudio (virtual sink) ◀─ dwarfort             │
                                      │  saves → host dir (bind mount, on disk)            │
+                                     │  backups → host dir (periodic save tarballs)       │
                                      └──────────────────────────────────────────────────┘
 ```
 
@@ -138,7 +140,8 @@ Images are published to `ghcr.io/sessa93/remote-df` with tags:
 | Path                                             | Purpose                                                                          |
 | ------------------------------------------------ | -------------------------------------------------------------------------------- |
 | [`docker/Dockerfile`](docker/Dockerfile)         | Multi-stage amd64 image: custom SDL2 + DF + audio + Xvnc + noVNC                 |
-| [`docker/start.sh`](docker/start.sh)             | Entrypoint: PulseAudio, ffmpeg audio stream, display stack, DF with auto-restart |
+| [`docker/start.sh`](docker/start.sh)             | Entrypoint: PulseAudio, Icecast, display stack, DF (auto-restart/pause), backups |
+| [`docker/icecast.xml`](docker/icecast.xml)       | Icecast config: fans the ffmpeg audio source out to browser listeners            |
 | [`scripts/deploy.sh`](scripts/deploy.sh)         | Sync build context + `docker compose up --build` on the remote (both editions)   |
 | [`docker-compose.yml`](docker-compose.yml)       | Build/run both editions; saves bind-mounted to a host dir; loopback ports        |
 | [`scripts/connect.sh`](scripts/connect.sh)       | SSH tunnel (VNC + audio) + open browser (run from your machine)                  |
@@ -155,10 +158,36 @@ same way.
 ### Audio Streaming
 
 A **PulseAudio** virtual null sink captures DF's audio output (via `SDL_AUDIODRIVER=pulse`).
-**ffmpeg** reads from the PulseAudio monitor source, encodes to Opus/WebM at 96kbps, and serves
-it internally. **nginx** proxies it at `/audio` on the same port as noVNC, and the custom
-`index.html` landing page embeds an `<audio src="/audio">` element — so video and audio
-are in the same browser tab with no extra ports or URLs. Latency is ~100-200ms.
+**ffmpeg** reads from the PulseAudio monitor source, encodes to Ogg/Opus at 96 kbps, and pushes
+it to an internal **Icecast** server as a source. **nginx** proxies the Icecast mount at `/audio`
+on the same port as noVNC, and the custom `index.html` landing page embeds an `<audio src="/audio">`
+element — so video and audio share one browser tab with no extra ports. Icecast fans the stream
+out to many listeners and survives tab reloads/reconnects (ffmpeg's earlier one-client HTTP
+server would drop and 502 on reconnect). Latency is ~100-200 ms.
+
+### Save Backups & Browse/Download
+
+A background loop tarballs the save dir to `/backups` every `BACKUP_INTERVAL` seconds (default
+30 min), keeping the newest `BACKUP_KEEP` (default 48). `/backups` is bind-mounted to a host
+directory (`DF_BACKUPS_DIR`, default `~/remote-df/backups`), so backups live on disk too. nginx
+serves three browse/download endpoints (linked from the landing page):
+
+- `/backups/` — download a save tarball
+- `/saves/` — browse the live save directory
+- `/logs/` — view container logs (`df.log`, `xvnc.log`, `audio.log`, `icecast.log`, …)
+
+### Idle Auto-Pause
+
+When no VNC client is connected for `IDLE_GRACE` seconds (default 30), `dwarfort` is paused
+with `SIGSTOP` to save CPU, and resumed with `SIGCONT` the moment a browser reconnects. Set
+`DF_AUTOPAUSE=0` to keep the simulation running while you're disconnected (e.g. to let a
+fortress run overnight).
+
+### Health & Limits
+
+The container declares a Docker **healthcheck** (HTTP probe on `:6080`) so `docker compose ps`
+and restart policies can tell when it's wedged, and **resource limits** (`DF_CPUS`, `DF_MEMORY`,
+plus a pid cap) so a runaway `dwarfort` can't take down the host.
 
 ### Custom SDL2 Build
 
@@ -178,13 +207,21 @@ survive redeploys, and can be backed up or copied with ordinary file tools (no
 
 ## Configuration
 
-| Variable     | Default    | Description                                      |
-| ------------ | ---------- | ------------------------------------------------ |
-| `GEOM`       | `1280x800` | Virtual display resolution                       |
-| `VNC_PORT`   | `5900`     | VNC server port (internal)                       |
-| `WEB_PORT`   | `6080`     | nginx port (noVNC + audio, tunneled to browser)  |
-| `DF_VERSION` | `53_14`    | DF version (used in image tags and download URL) |
-| `DF_EDITION` | `classic`  | `classic` or `steam`                             |
+| Variable          | Default          | Description                                       |
+| ----------------- | ---------------- | ------------------------------------------------- |
+| `GEOM`            | `1280x800`       | Virtual display resolution                        |
+| `VNC_PORT`        | `5900`           | VNC server port (internal)                        |
+| `WEB_PORT`        | `6080`           | nginx port (noVNC + audio, tunneled to browser)   |
+| `DF_VERSION`      | `53_14`          | DF version (used in image tags and download URL)  |
+| `DF_EDITION`      | `classic`        | `classic` or `steam`                              |
+| `DF_SAVES_DIR`    | `./saves`        | Host dir bind-mounted to DF's save location       |
+| `DF_BACKUPS_DIR`  | `./backups`      | Host dir for periodic save-backup tarballs        |
+| `BACKUP_INTERVAL` | `1800`           | Seconds between save backups (`0` disables)       |
+| `BACKUP_KEEP`     | `48`             | Number of backup tarballs to retain               |
+| `DF_AUTOPAUSE`    | `1`              | Pause DF when no client is connected (`0` off)    |
+| `IDLE_GRACE`      | `30`             | Seconds with no clients before auto-pausing       |
+| `DF_CPUS`         | `2.0`            | CPU limit for the container                       |
+| `DF_MEMORY`       | `3g`             | Memory limit for the container                    |
 
 ## Security
 

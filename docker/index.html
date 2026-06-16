@@ -63,6 +63,21 @@
       #play-btn:hover {
         background: #a87820;
       }
+
+      #links {
+        display: flex;
+        gap: 10px;
+        white-space: nowrap;
+      }
+      #links a {
+        color: #8b6914;
+        font: 11px/1 monospace;
+        text-decoration: none;
+      }
+      #links a:hover {
+        color: #c89a3a;
+        text-decoration: underline;
+      }
     </style>
   </head>
   <body>
@@ -84,6 +99,11 @@
       >
         &#x25B6; Enable audio
       </button>
+      <nav id="links">
+        <a href="/backups/" target="_blank" title="Download periodic save backups">backups</a>
+        <a href="/saves/" target="_blank" title="Browse the live save directory">saves</a>
+        <a href="/logs/" target="_blank" title="View container logs">logs</a>
+      </nav>
     </div>
 
     <script>

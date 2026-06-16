@@ -24,7 +24,7 @@ HERE="$(cd "$(dirname "$0")/.." && pwd)"
 
 # Files the build + compose need on the remote (DF assets download at build time).
 echo "==> Syncing build context to $REMOTE:~/$REMOTE_DIR"
-ssh "$REMOTE" "mkdir -p ~/$REMOTE_DIR/docker ~/$REMOTE_DIR/secrets ~/$REMOTE_DIR/saves"
+ssh "$REMOTE" "mkdir -p ~/$REMOTE_DIR/docker ~/$REMOTE_DIR/secrets ~/$REMOTE_DIR/saves ~/$REMOTE_DIR/backups"
 scp -q "$HERE/docker/Dockerfile"   "$REMOTE:~/$REMOTE_DIR/docker/Dockerfile"
 scp -q "$HERE/docker/start.sh"     "$REMOTE:~/$REMOTE_DIR/docker/start.sh"
 scp -q "$HERE/docker/nginx.conf"   "$REMOTE:~/$REMOTE_DIR/docker/nginx.conf"

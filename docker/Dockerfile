@@ -39,14 +39,16 @@ RUN curl -fsSL "https://github.com/libsdl-org/SDL/releases/download/release-${SD
 FROM debian:bookworm-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
+# Preseed icecast2 so its postinst doesn't open an interactive debconf prompt.
+RUN echo "icecast2 icecast2/icecast-setup boolean false" | debconf-set-selections
 RUN apt-get update && apt-get install -y --no-install-recommends \
       libsdl2-2.0-0 libsdl2-image-2.0-0 \
       libgl1 libglu1-mesa libgl1-mesa-dri \
       tigervnc-standalone-server tigervnc-common x11-utils x11-apps \
       websockify novnc nginx \
-      procps imagemagick \
+      procps iproute2 imagemagick \
       curl ca-certificates bzip2 \
-      pulseaudio ffmpeg \
+      pulseaudio ffmpeg icecast2 \
     && rm -rf /var/lib/apt/lists/*
 
 # A tiny window manager so the SDL window gets input focus (keyboard) and is
@@ -136,9 +138,16 @@ RUN mkdir -p /opt/df/prefs && \
 COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
-# nginx: unified reverse proxy serving noVNC + WebSocket + audio under port 6080.
+# Icecast: audio fan-out server (see start.sh + docker/icecast.xml).
+COPY docker/icecast.xml /etc/icecast2/icecast.xml
+
+# nginx: unified reverse proxy serving noVNC + WebSocket + audio + saves/logs
+# under port 6080. Run workers as root so they can read the saves dir (under
+# /root) and the log dir for the /saves and /logs browse endpoints. Safe here:
+# the port is loopback-only and reached over an SSH tunnel by a single user.
 COPY docker/nginx.conf /etc/nginx/conf.d/df.conf
-RUN rm -f /etc/nginx/sites-enabled/default
+RUN rm -f /etc/nginx/sites-enabled/default \
+    && sed -i 's/^user .*/user root;/' /etc/nginx/nginx.conf
 RUN mkdir -p /opt/novnc-custom
 COPY docker/index.html /opt/novnc-custom/index.html
 

@@ -13,8 +13,9 @@ out/
 *.wasm
 node_modules/
 
-# Local Compose state: saved games (bind mount) and a personal .env
+# Local Compose state: saved games + backups (bind mounts) and a personal .env
 /saves/
+/backups/
 .env
 
 # OS / editor

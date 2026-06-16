@@ -44,16 +44,21 @@ jobs:
             echo "==> (Re)starting container"
             NAME="df"
             SAVES_DIR="\$HOME/remote-df/saves"
-            mkdir -p "\$SAVES_DIR"
+            BACKUPS_DIR="\$HOME/remote-df/backups"
+            mkdir -p "\$SAVES_DIR" "\$BACKUPS_DIR"
             docker rm -f "\$NAME" 2>/dev/null || true
             docker run -d --name "\$NAME" \
               --restart unless-stopped \
+              --cpus "2.0" --memory "3g" --pids-limit 512 \
+              --health-cmd "curl -fsS http://localhost:6080/ >/dev/null || exit 1" \
+              --health-interval 30s --health-timeout 5s --health-retries 3 --health-start-period 40s \
               -p "127.0.0.1:6080:6080" \
               -p "127.0.0.1:5900:5900" \
               -v "\$SAVES_DIR:/root/.local/share/Bay 12 Games/Dwarf Fortress/save" \
+              -v "\$BACKUPS_DIR:/backups" \
               "${IMAGE}"
 
-            echo "==> Container '\$NAME' is up (loopback only). Saves: \$SAVES_DIR"
+            echo "==> Container '\$NAME' is up (loopback only). Saves: \$SAVES_DIR  Backups: \$BACKUPS_DIR"
           SCRIPT
 
       - name: Cleanup SSH key

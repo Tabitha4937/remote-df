@@ -9,6 +9,7 @@ scripts/
 docker-compose.yml
 secrets/
 saves/
+backups/
 c2w/
 df/
 out/
