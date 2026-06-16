@@ -25,12 +25,10 @@ HERE="$(cd "$(dirname "$0")/.." && pwd)"
 # Files the build + compose need on the remote (DF assets download at build time).
 echo "==> Syncing build context to $REMOTE:~/$REMOTE_DIR"
 ssh "$REMOTE" "mkdir -p ~/$REMOTE_DIR/docker ~/$REMOTE_DIR/secrets ~/$REMOTE_DIR/saves ~/$REMOTE_DIR/backups"
-scp -q "$HERE/docker/Dockerfile"   "$REMOTE:~/$REMOTE_DIR/docker/Dockerfile"
-scp -q "$HERE/docker/start.sh"     "$REMOTE:~/$REMOTE_DIR/docker/start.sh"
-scp -q "$HERE/docker/nginx.conf"   "$REMOTE:~/$REMOTE_DIR/docker/nginx.conf"
-scp -q "$HERE/docker/index.html"   "$REMOTE:~/$REMOTE_DIR/docker/index.html"
-scp -q "$HERE/docker-compose.yml"  "$REMOTE:~/$REMOTE_DIR/docker-compose.yml"
-scp -q "$HERE/.dockerignore"       "$REMOTE:~/$REMOTE_DIR/.dockerignore"
+# Copy the whole docker/ dir so new build inputs are always included.
+scp -q -r "$HERE/docker/."          "$REMOTE:~/$REMOTE_DIR/docker/"
+scp -q "$HERE/docker-compose.yml"   "$REMOTE:~/$REMOTE_DIR/docker-compose.yml"
+scp -q "$HERE/.dockerignore"        "$REMOTE:~/$REMOTE_DIR/.dockerignore"
 
 if [ "$DF_EDITION" = "steam" ]; then
   echo "==> Writing Steam credentials to $REMOTE (BuildKit secrets, never imaged)"
